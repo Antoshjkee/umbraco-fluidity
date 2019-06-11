@@ -24,6 +24,7 @@ using Umbraco.Web.WebApi.Filters;
 
 namespace Fluidity.Web.Trees
 {
+
     [PluginController("fluidity")]
     [Tree("fluidity", "fluidity", "Fluidity", initialize:false)]
     public class FluidityTreeController : TreeController
