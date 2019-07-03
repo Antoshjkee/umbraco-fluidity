@@ -6,9 +6,12 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data.Objects;
 using System.Linq;
 using System.Linq.Expressions;
+using Fluidity.Attributes;
 using Fluidity.Events;
+using Fluidity.Extensions;
 using Fluidity.Models;
 using Umbraco.Core.Models;
 
@@ -167,14 +170,26 @@ namespace Fluidity.Data
             // Check if the specified Identifier type is the same type as the "id" arguement.
             // If it is, then we don't need to convert this value.
             // Otherwise, we will need to convert the "id" to the specified type.
-            if(typeof(TId) == id.GetType())
+            if (id is TId integerId)
             {
-                return Get((TId)id, fireEvents);
+                return Get(integerId, fireEvents);
             }
-            else
+            var actualType = ObjectContext.GetObjectType(id.GetType());
+
+            if (actualType == typeof(TEntity))
             {
-                return Get((TId)TypeDescriptor.GetConverter(typeof(TId)).ConvertFrom(id), fireEvents);
+                var primaryKeyProperty = actualType.GetProperties().FirstOrDefault(x => Attribute.IsDefined(x, typeof(PrimaryKeyAttribute)));
+                if (primaryKeyProperty != null)
+                {
+                    var idValue = primaryKeyProperty.GetValue(id);
+                    return Get((TId)idValue, fireEvents);
+                }
+
+                var dynamicObject = id.ToDynamic();
+                return Get((TId) dynamicObject.Id, fireEvents);
             }
+
+            return Get((TId)TypeDescriptor.GetConverter(typeof(TId)).ConvertFrom(id), fireEvents);
         }
 
         IEnumerable<object> IFluidityRepository.GetAll(bool fireEvents)
